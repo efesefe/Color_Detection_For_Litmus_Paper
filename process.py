@@ -3,9 +3,8 @@ import colorsys
 import numpy as np
 import matplotlib.pyplot as plt
 
-def sum_area(x, y, im, n=0):
-    imageFrame = cv.rectangle(img, (x, y), (x + 38, y + 23), (0, 0, 255), 1)
-    cv.putText(img, str(n), (x, y), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0,0,255))
+def sum_area(x, y, im, n):
+    
     colorsum = np.array([0, 0, 0])
     count = 0
     for i in range(x+5, x + 35):
@@ -19,6 +18,8 @@ def sum_area(x, y, im, n=0):
     colorsum[0] = int(colorsum[0] / count)
     colorsum[1] = int(colorsum[1] / count)
     colorsum[2] = int(colorsum[2] / count)
+    imageFrame = cv.rectangle(img, (x, y), (x + 38, y + 23), (0, 0, 255), 1)
+    cv.putText(img, ("{}".format(n)), (x, y), cv.FONT_HERSHEY_SIMPLEX, 1, (0,0,255))
     return colorsum[0], colorsum[1], colorsum[2]
 
 def sum_area_for_click_color_matching(x, y, im):
@@ -43,10 +44,10 @@ def clickless_color_detection(coords, c):
     temp = cv.cvtColor(img, cv.COLOR_BGR2HSV)
 
     (h, s, v) = sum_area(coords[0], coords[1], temp,c)
-    # print('{}-{}-{}'.format(h,s,v))
+
     hs = 5
-    ss = 25
-    vs = 26
+    ss = 50
+    vs = 50
     lb = 0 if h - hs <= 0 else h - hs
     lg = 0 if s - 8 <= 0 else s - 8
     lr = 0 if v - 11 <= 0 else v - 11
@@ -69,8 +70,8 @@ def clickless_color_detection(coords, c):
             istrue = True
             x, y, w, h = cv.boundingRect(contour)
             if x > 540:
-                imageFrame = cv.rectangle(img, (coords[0], coords[1]), (coords[0] + w, coords[1] + h), (0, 0, 255), 1)
-                cv.putText(img, str(c), (coords[0], coords[1]), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0,0,255))
+                imageFrame = cv.rectangle(img, (x, y), (x + w, y + h), (0, 0, 255), 1)
+                cv.putText(img, str(c), (x, y), cv.FONT_HERSHEY_SIMPLEX, 1, (0,0,255))
                 break
             
     cv.imshow('image', img)
@@ -82,13 +83,6 @@ def click_event(event, x, y, flags, params):
         temp = cv.cvtColor(img, cv.COLOR_BGR2HSV)
 
         (h, s, v) = sum_area_for_click_color_matching(x, y, temp)
-
-        # print('{} {}'.format(x,y))
-        # xx = 918
-        # yy = 159
-        # imageFrame = cv.rectangle(img, (xx, yy), (xx + 40, yy + 25), (0, 0, 255), 1)
-        # cv.imshow('image', img)
-        # return
 
         hs = 5
         ss = 25
@@ -119,52 +113,36 @@ def click_event(event, x, y, flags, params):
 
         cv.imshow('image', img)
 
-
-
 img = cv.imread('images/twocolorsv1.jpeg')
-# d = cv.cvtColor(img, cv.COLOR_BGR2HSV)
-img2 = cv.imread('images/original.jpeg')
 
 img = cv.resize(img, (1000,750))
 
-# xx = 624
-# yy = 311
-# # sum_area(xx, yy, img)
-# imageFrame = cv.rectangle(img, (xx, yy), (xx + 40, yy + 25), (0, 0, 255), 1)
-# xx = 624
-# yy = 349
-# # sum_area(xx, yy, img)
-# imageFrame = cv.rectangle(img, (xx, yy), (xx + 40, yy + 25), (0, 0, 255), 1)
-# xx = 624
-# yy = 387
-# # sum_area(xx, yy, img)
-# imageFrame = cv.rectangle(img, (xx, yy), (xx + 40, yy + 25), (0, 0, 255), 1)
+arr = [
+    (565-498, 159),(744-498, 159),(860-498, 274),
+    (565-498, 198),(744-498, 274),(860-498, 311),
+    (564-498, 235),(744-498, 311),(860-498, 350),
+    (564-498, 274),(742-498, 350),(859-498, 387),
+    (563-498, 311),(742-498, 387),(858-497, 424),
+    (563-498, 350),(742-498, 425),(858-498, 463),
+    (563-500, 387),(742-498, 501),(858-497, 502),
+    (563-499, 426),(802-498, 159),(918-498, 159),
+    (563-499, 463),(802-498, 198),(918-498, 198),
+    (563-499, 501),(802-498, 235),(919-498, 235),
+    (624-498, 311),(802-498, 274),(919-498, 274),
+    (624-498, 349),(802-498, 311),(919-498, 311),
+    (624-499, 387),(802-498, 350),(919-499, 350),
+    (684-498, 235),(801-498, 387),(918-498, 387),
+    (684-498, 274),(800-498, 425),(918-498, 425),
+    (684-498, 311),(800-498, 462),(918-498, 462),
+    (683-498, 387),(800-498, 501),(918-498, 501),
+    (683-498, 425),(860-498, 159),
+    (683-498, 501),(860-498, 235)]
 
-dictate = {
-    sum_area(565-498, 159, img): (565-498, 159), sum_area(744-498, 159, img): (744-498, 159), sum_area(860-498, 274, img): (860-498, 274),
-    sum_area(565-498, 198, img): (565-498, 198), sum_area(744-498, 274, img): (744-498, 274), sum_area(860-498, 311, img): (860-498, 311),
-    sum_area(564-498, 235, img): (564-498, 235), sum_area(744-498, 311, img): (744-498, 311), sum_area(860-498, 350, img): (860-498, 350),
-    sum_area(564-498, 274, img): (564-498, 274), sum_area(742-498, 350, img): (742-498, 350), sum_area(859-498, 387, img): (859-498, 387),
-    sum_area(563-498, 311, img): (563-498, 311), sum_area(742-498, 387, img): (742-498, 387), sum_area(858-497, 424, img): (858-497, 424),
-    sum_area(563-498, 350, img): (563-498, 350), sum_area(742-498, 425, img): (742-498, 425), sum_area(858-498, 463, img): (858-498, 463),
-    sum_area(563-500, 387, img): (563-500, 387), sum_area(742-498, 501, img): (742-498, 501), sum_area(858-497, 502, img): (858-497, 502),
-    sum_area(563-499, 426, img): (563-499, 426), sum_area(802-498, 159, img): (802-498, 159), sum_area(918-498, 159, img): (918-498, 159),
-    sum_area(563-499, 463, img): (563-499, 463), sum_area(802-498, 198, img): (802-498, 198), sum_area(918-498, 198, img): (918-498, 198),
-    sum_area(563-499, 501, img): (563-499, 501), sum_area(802-498, 235, img): (802-498, 235), sum_area(919-498, 235, img): (919-498, 235),
-    sum_area(624-498, 311, img): (624-498, 311), sum_area(802-498, 274, img): (802-498, 274), sum_area(919-498, 274, img): (919-498, 274),
-    sum_area(624-498, 349, img): (624-498, 349), sum_area(802-498, 311, img): (802-498, 311), sum_area(919-498, 311, img): (919-498, 311),
-    sum_area(624-499, 387, img): (624-499, 387), sum_area(802-498, 350, img): (802-498, 350), sum_area(919-499, 350, img): (919-499, 350),
-    sum_area(684-498, 235, img): (684-498, 235), sum_area(801-498, 387, img): (801-498, 387), sum_area(918-498, 387, img): (918-498, 387),
-    sum_area(684-498, 274, img): (684-498, 274), sum_area(800-498, 425, img): (800-498, 425), sum_area(918-498, 425, img): (918-498, 425),
-    sum_area(684-498, 311, img): (684-498, 311), sum_area(800-498, 462, img): (800-498, 462), sum_area(918-498, 462, img): (918-498, 462),
-    sum_area(683-498, 387, img): (683-498, 387), sum_area(800-498, 501, img): (800-498, 501), sum_area(918-498, 501, img): (918-498, 501),
-    sum_area(683-498, 425, img): (683-498, 425), sum_area(860-498, 159, img): (860-498, 159),
-    sum_area(683-498, 501, img): (683-498, 501), sum_area(860-498, 235, img): (860-498, 235),
-}
 c = 0
-for x in dictate:
+
+for x in arr:
     c += 1
-    clickless_color_detection(dictate.get(x), c)
+    clickless_color_detection(x, c)
 cv.imshow('image', img)
 cv.setMouseCallback('image', click_event)
 
