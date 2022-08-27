@@ -1,7 +1,5 @@
 import cv2 as cv
-import colorsys
 import numpy as np
-import matplotlib.pyplot as plt
 
 def sum_area(x, y, im, n):
     
