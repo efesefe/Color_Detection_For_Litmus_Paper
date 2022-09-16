@@ -1,277 +1,258 @@
 import cv2 as cv
 import numpy as np
+from numpy.ma import divide, mean
 from matplotlib import pyplot as plt
 import math
+from os.path import exists
+import xlsxwriter
+from multiprocessing import Process
+from generic_operations import *
 
-arr = [
-    (565-498, 159), (565-498, 198), (564-498, 235), (564-498, 274),
-    (563-498, 311), (563-498, 350), (563-500, 387), (563-499, 426),
-    (563-499, 463), (563-499, 501), (624-498, 311), (624-498, 349),
-    (624-499, 387), (684-498, 235), (684-498, 274), (684-498, 311),
-    (683-498, 387), (683-498, 425), (683-498, 501), (744-498, 159),
-    (744-498, 274), (744-498, 311), (742-498, 350), (742-498, 387),
-    (742-498, 425), (742-498, 501), (802-498, 159), (802-498, 198),
-    (802-498, 235), (802-498, 274), (802-498, 311), (802-498, 350),
-    (801-498, 387), (800-498, 425), (800-498, 462), (800-498, 501),
-    (860-498, 159), (860-498, 235), (860-498, 274), (860-498, 311),
-    (860-498, 350), (859-498, 387), (858-497, 424), (858-498, 463),
-    (858-497, 502), (918-498, 159), (918-498, 198), (919-498, 235),
-    (919-498, 274), (919-498, 311), (919-499, 350), (918-498, 387),
-    (918-498, 425), (918-498, 462), (918-498, 501),
-    ]
+def general_get_area(im, n, left, right, w, h, impaint):
 
-arr1 = [
-    (565, 159), (565, 198), (564, 235), (564, 274),
-    (563, 311), (563, 350), (563, 387), (563, 426),
-    (563, 463), (563, 501), (624, 311), (624, 349),
-    (624, 387), (684, 235), (684, 274), (684, 311),
-    (683, 387), (683, 425), (683, 501), (744, 159),
-    (744, 274), (744, 311), (742, 350), (742, 387),
-    (742, 425), (742, 501), (802, 159), (802, 198),
-    (802, 235), (802, 274), (802, 311), (802, 350),
-    (801, 387), (800, 425), (800, 462), (800, 501),
-    (860, 159), (860, 235), (860, 274), (860, 311),
-    (860, 350), (859, 387), (858, 424), (858, 463),
-    (858, 502), (918, 159), (918, 198), (919, 235),
-    (919, 274), (919, 311), (919, 350), (918, 387),
-    (918, 425), (918, 462), (918, 501),
-    ]
+    x = left[n - 1][0]
+    y = left[n - 1][1]
 
-image_path = 'images/twocolorsv1.jpeg'
-
-def get_area(x, y, im, n):
-    # cutted = im[y - 10 : y + 11, x - 15 : x + 16]
-    cutted = im[y + 5 : y + 20, x + 5 : x + 35]
-    # im[y + 5 : y + 20, x + 5 : x + 35] = np.array([255,0,0])
-    # search_here = im[:,580:-1]
-    # cv.imshow("cut image",cutted)
-
-    # mincoords = -1
-    # mindiff = np.array([255,255,255])
-    # for d in range(len(arr1)):
-    #     diff = np.array([0,0,0])
-    #     # for i in range(arr1[d][1], arr1[d][1] + 25):
-    #     #     for j in range(arr1[d][0], arr1[d][0] + 40):
-    #     for k in range(cutted.shape[0]):
-    #         for l in range(cutted.shape[1]):
-    #             j, i = arr[d][1], arr[d][0]
-    #             diff += np.subtract(im[j + k, i + l] , cutted[k, l])
-    #             # diff[1] = int(im[j + k, i + l][1]) - int(cutted[k, l][1])
-    #             # diff[2] = int(im[j + k, i + l][2]) - int(cutted[k, l][2])
-    #             # print(diff)
-    #     if (d == 0):
-    #         mindiff = diff
-    #     elif(
-    #        ((diff[0] < 0) and (diff[1] < 0) and (diff[2] < 0)) or   # 1
-    #        ((diff[0] < 0) and (diff[1] == 0) and (diff[2] == 0)) or # 2
-    #        ((diff[0] == 0) and (diff[1] < 0) and (diff[2] == 0)) or # 3
-    #        ((diff[0] == 0) and (diff[1] == 0) and (diff[2] < 0)) or # 4
-    #        ((diff[0] > 0) and (diff[1] > 0) and (diff[2] > 0)) or   # 5
-    #        ((diff[0] > 0) and (diff[1] > 0) and (diff[2] == 0)) or  # 6
-    #        ((diff[0] > 0) and (diff[1] == 0) and (diff[2] > 0)) or  # 7
-    #        ((diff[0] > 0) and (diff[1] == 0) and (diff[2] == 0)) or # 8
-    #        ((diff[0] < 0) and (diff[1] < 0) and (diff[2] == 0)) or  # 9
-    #        ((diff[0] < 0) and (diff[1] == 0) and (diff[2] < 0)) or  # 10
-    #        ((diff[0] == 0) and (diff[1] > 0) and (diff[2] > 0)) or  # 11
-    #        ((diff[0] == 0) and (diff[1] > 0) and (diff[2] == 0)) or # 12
-    #        ((diff[0] == 0) and (diff[1] == 0) and (diff[2] > 0)) or # 13
-    #        ((diff[0] == 0) and (diff[1] < 0) and (diff[2] < 0))     # 14
-    #       ):
-    #         if (abs(diff[0]) < mindiff[0]) and (abs(diff[1]) < mindiff[1]) and (abs(diff[2]) < mindiff[2]):
-    #             mindiff = diff
-    #             mincoords = d
+    cutted = im[y : y + h, x : x + w]
     minrect = -1
-    smallestdist = 50000
-    for d in range(len(arr1)):
-        distsum = 0
-        c = 0
-        for k in range(cutted.shape[0]):
-            for l in range(cutted.shape[1]):
-                imx = arr1[d][0] + l + 5
-                imy = arr1[d][1] + k + 5
-                difB = int(im[imy, imx][0]) - int(cutted[k, l][0])
-                difG = int(im[imy, imx][1]) - int(cutted[k, l][1])
-                difR = int(im[imy, imx][2]) - int(cutted[k, l][2])
-                
-                distsum += math.sqrt((difB**2) + (difG**2) + (difR**2))
-                c += 1
-        distsum = distsum / c
-        # print(distsum)
-        if distsum < smallestdist:
+    smallestdist = -1
+    for d in range(len(right)):
+        h1, h2, s1, s2, v1, v2 = 0, 0, 0, 0, 0, 0
+        v1, s1, h1 = get_average_color_of_area(im, right[d][0], right[d][1], cutted.shape[1], cutted.shape[0])
+        v2, s2, h2 = get_average_color_of_area(im, x, y, cutted.shape[1], cutted.shape[0])
+        difH = h1 - h2
+        difS = s1 - s2
+        difV = v1 - v2
+        ph = 2 + (h1 + h2) / 512
+        ps = 4
+        pv = 2 + (512 - h1 - h2) / 512
+        distsum = math.sqrt(ph * (difH ** 2) + ps * (difS ** 2) + pv * (difV ** 2))
+        # distsum = math.sqrt((difH ** 2) + (difS ** 2) + (difV ** 2))
+        # distsum3 = math.sqrt((difS ** 2) + (difV ** 2)) + abs(difH) # should work better for LAB colorspace
+
+        if distsum < smallestdist or d == 0:
             smallestdist = distsum
             minrect = d
 
-    w = 40
-    h = 25
-    # print(mindiff)
-    # print(im[arr1[mincoords][1], arr1[mincoords][0]])
-    # print("DONE!")
-    # print(cutted[10,15])
-    # x2 = arr1[mincoords][0]
-    # y2 = arr1[mincoords][1]
+    x2 = right[minrect][0]
+    y2 = right[minrect][1]
+    cv.rectangle(impaint, (x2, y2), (x2 + w, y2 + h), (0, 0, 255), 1)
+    cv.putText(impaint, str(n), (x, y), cv.FONT_HERSHEY_SIMPLEX, 0.5, (255,255,0))
+    cv.putText(impaint, str(n), (x2 + 12, y2 + 20), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0,255,255))
+    return minrect + 1 == n, minrect, impaint
 
-    x2 = arr1[minrect][0]
-    y2 = arr1[minrect][1]
+def test_range():
+    procs = []
+    for v in range(49, 40, -1):
+        p = Process(target=f, args=(v,))
+        procs.append(p)
+        p.start()
 
-    cv.rectangle(img, (x2, y2), (x2 + w, y2 + h), (0, 0, 255), 2)
-    cv.putText(img, str(n), (x, y), cv.FONT_HERSHEY_SIMPLEX, 1.0, (0,0,255))
-    cv.putText(img, str(n), (x2, y2), cv.FONT_HERSHEY_SIMPLEX, 1.0, (0,255,255))
-    # print(arr1[d][0])
-    # print(arr1[d][1])
+    for c in procs:
+        c.join()
 
-    # for d in range(len(arr1)):
-    #     diff = np.array([0,0,0])
-    #     i = arr1[d][0]
-    #     j = arr1[d][1]
-    #     for k in range(cutted.shape[0]):
-    #         for l in range(cutted.shape[1]):
-    #             diff = abs(im[j + l, i + k] - cutted[l, k])
-    #     if (diff[0] < mindiff[0]) and (diff[1] < mindiff[1]) and (diff[2] < mindiff[2]):
-    #         mindiff = diff
-    #         minx = j
-    #         miny = i
+def f(v):
+    image_name = 'originalv' + str(v)
+    img, b_img = original_bright_images(v)
+    img2 = img = resize_smaller(img)
+    b_img = resize_smaller(b_img)
+    l, r = left_right_coordinates(v)
 
+    w = 25
+    h = 15
     
-    # result = cv.matchTemplate(im, cutted, cv.TM_SQDIFF)
-    # min_val, max_val, min_loc, max_loc = cv.minMaxLoc(result)
-    # w = cutted.shape[1]
-    # h = cutted.shape[0]
-    # cv.rectangle(img, (max_loc[0], max_loc[1]), (max_loc[0]   + w, max_loc[1] + h), (0,255,255), 2)
-    #cv.imshow("result", result)
-            
+    workbook = xlsxwriter.Workbook('values/' + image_name + '_values.xlsx')
+    worksheet = workbook.add_worksheet()
 
-def sum_area(x, y, im, n):
-    colorsum = np.array([0, 0, 0])
-    count = 0
-    for i in range(x+5, x + 35):
-        for j in range(y+5, y + 18):
-            colorsum[0] = colorsum[0] + im[j, i, 0] # b
-            colorsum[1] = colorsum[1] + im[j, i, 1] # g
-            colorsum[2] = colorsum[2] + im[j, i, 2] # r
-            # img[j,i] = np.array([255,255,0])
-            count += 1
+    worksheet.write('A1', 'Blur')
+    worksheet.write('B1', 'Gamma')
+    worksheet.write('C1', 'Luminance Correction')
+    worksheet.write('D1', 'True Number (BGR)')
 
-    colorsum[0] = int(colorsum[0] / count)
-    colorsum[1] = int(colorsum[1] / count)
-    colorsum[2] = int(colorsum[2] / count)
-    imageFrame = cv.rectangle(img, (x, y), (x + 38, y + 23), (0, 0, 255), 1)
-    cv.putText(img, ("{}".format(n)), (x, y), cv.FONT_HERSHEY_SIMPLEX, 1, (0,0,255))
-    return colorsum[0], colorsum[1], colorsum[2]
+    worksheet.write('F1', 'Blur')
+    worksheet.write('G1', 'Gamma')
+    worksheet.write('H1', 'Luminance Correction')
+    worksheet.write('I1', 'True Number (HSV)')
 
-def sum_area_for_click_color_matching(x, y, im):
-    colorsum = np.array([0, 0, 0])
-    count = 0
-    im = cv.GaussianBlur(im,(3,3),0)
-    for i in range(x-5, x + 6):
-        for j in range(y - 5, y + 6):
-            colorsum[0] = colorsum[0] + im[j, i, 0] # b
-            colorsum[1] = colorsum[1] + im[j, i, 1] # g
-            colorsum[2] = colorsum[2] + im[j, i, 2] # r
-            img[j,i] = np.array([255,255,0])
-            count += 1
+    worksheet.write('K1', 'Blur')
+    worksheet.write('L1', 'Gamma')
+    worksheet.write('M1', 'Luminance Correction')
+    worksheet.write('N1', 'True Number (LAB)')
 
-    colorsum[0] = int(colorsum[0] / count)
-    colorsum[1] = int(colorsum[1] / count)
-    colorsum[2] = int(colorsum[2] / count)
-    return colorsum[0], colorsum[1], colorsum[2]
+    worksheet.write('P1', 'Blur')
+    worksheet.write('R1', 'Gamma')
+    worksheet.write('S1', 'Luminance Correction')
+    worksheet.write('T1', 'True Number (LUV)')
 
-def clickless_color_detection(coords, c):
-    tobemasked = cv.cvtColor(img, cv.COLOR_BGR2HSV)
+    t = 2
+    blu = 0
+
+    gammabgr = gammahsv = gammalab = gammaluv = 0
+    blurbgr = blurhsv = blurlab = blurluv = 0
+    besttruebgr = besttruehsv = besttruelab = besttrueluv = 0
+    truetruesbgr = truetrueshsv = truetrueslab = truetruesluv = 0
+    lumbgr = lumhsv = lumlab = lumluv = 0
+
+    while blu <= 10:
+        for gam in np.linspace(1.0,0.0,num=41):
+            for tog in [0,1]:
+                truetruesbgr = truetrueslab = truetrueshsv = truetruesluv = 0
+                tm2 = tog % 2 == 0
+                if tm2:
+                    imglab = imghsv = imgbgr = imgluv = luminance_correction_with_bright_image(img, b_img)
+
+                imglab = cv.cvtColor(imglab, cv.COLOR_BGR2LAB)
+                imglab = apply_gamma_blur(imglab, gam, blu)
+                
+                imghsv = cv.cvtColor(imghsv, cv.COLOR_BGR2HSV)
+                imghsv = apply_gamma_blur(imghsv, gam, blu)
+
+                imgluv = cv.cvtColor(imgluv, cv.COLOR_BGR2LUV)
+                imgluv = apply_gamma_blur(imgluv, gam, blu)
+
+                imgbgr = apply_gamma_blur(imgbgr, gam, blu)
+
+                for i in range(len(l)):
+                    tempbgr, minrect, _ = general_get_area(imgbgr, i + 1, l, r, w,h, img2)
+                    if tempbgr:
+                        truetruesbgr += 1
+
+                    temphsv, minrect, _ = general_get_area(imghsv, i + 1, l, r, w,h, img2)
+                    if temphsv:
+                        truetrueshsv += 1
+
+                    templab, minrect, _ = general_get_area(imglab, i + 1, l, r, w,h, img2)
+                    if templab:
+                        truetrueslab += 1
+
+                    templuv, minrect, _ = general_get_area(imgluv, i + 1, l, r, w,h, img2)
+                    if templuv:
+                        truetruesluv += 1
+
+                if truetruesbgr > besttruebgr:
+                    besttruebgr = truetruesbgr
+                    gammabgr = gam
+                    blurbgr = blu
+                    lumbgr = 1 if tm2 else 0
+
+                if truetrueshsv > besttruehsv:
+                    besttruehsv = truetrueshsv
+                    gammahsv = gam
+                    blurhsv = blu
+                    lumhsv = 1 if tm2 else 0
+
+                if truetrueslab > besttruelab:
+                    besttruelab = truetrueslab
+                    gammalab = gam
+                    blurlab = blu
+                    lumlab = 1 if tm2 else 0
+
+                if truetruesluv > besttrueluv:
+                    besttrueluv = truetruesluv
+                    gammaluv = gam
+                    blurluv = blu
+                    lumluv = 1 if tm2 else 0
+
+                worksheet.write(('A' + str(t)), blu)
+                worksheet.write(('B' + str(t)), gam)
+                worksheet.write(('C' + str(t)), '+' if tm2 else '-')
+                worksheet.write(('D' + str(t)), truetruesbgr)
+
+                worksheet.write(('F' + str(t)), blu)
+                worksheet.write(('G' + str(t)), gam)
+                worksheet.write(('H' + str(t)), '+' if tm2 else '-')
+                worksheet.write(('I' + str(t)), truetrueshsv)
+
+                worksheet.write(('K' + str(t)), blu)
+                worksheet.write(('L' + str(t)), gam)
+                worksheet.write(('M' + str(t)), '+' if tm2 else '-')
+                worksheet.write(('N' + str(t)), truetrueslab)
+
+                worksheet.write(('P' + str(t)), blu)
+                worksheet.write(('R' + str(t)), gam)
+                worksheet.write(('S' + str(t)), '+' if tm2 else '-')
+                worksheet.write(('T' + str(t)), truetruesluv)
+
+                t += 1
+
+        if blu == 0: blu += 1
+        blu += 2
+    workbook.close()
+    print("-------originalv{}---------".format(v))
+    print("best true for bgr: {}".format(besttruebgr))
+    print("gamma for bgr: {}".format(gammabgr))
+    print("blur for bgr: {}".format(blurbgr))
+    print("luminance correction: {}".format(lumbgr))
+    print("---------------------------")
+    print("best true for hsv: {}".format(besttruehsv))
+    print("gamma for hsv: {}".format(gammahsv))
+    print("blur for hsv: {}".format(blurhsv))
+    print("luminance correction: {}".format(lumhsv))
+    print("---------------------------")
+    print("best true for lab: {}".format(besttruelab))
+    print("gamma for lab: {}".format(gammalab))
+    print("blur for lab: {}".format(blurlab))
+    print("luminance correction: {}".format(lumlab))
+    print("---------------------------")
+    print("best true for luv: {}".format(besttrueluv))
+    print("gamma for luv: {}".format(gammaluv))
+    print("blur for luv: {}".format(blurluv))
+    print("luminance correction: {}".format(lumluv))
+    print("---------------------------")
+
+def singular_test(v, blur, gamma):
+    img, im_b = original_bright_images(v)
+
+    img = img2 = resize_smaller(img)
+
+    # im_b = resize_smaller(im_b)
+
+    img = custom_luminance_correction(img)
+    img = cv.cvtColor(img, cv.COLOR_BGR2HSV)
+
+    img = apply_gamma_blur(img, gamma, blur)
+    l, r = left_right_coordinates(v)
+
+    width = 25
+    height = 15
+    truetrues = overlap = 0
+    maps = {}
+    # test_coords(r, width, height, img2)
+    # test_coords(l, width, height, img2)
+    for i in range(len(l)):
+        temp, minrect, img2 = general_get_area(img, i + 1, l, r, width,height, img2)
+        if temp:
+            truetrues += 1
+        else:
+            print('{} -> {}'.format(i + 1, minrect + 1))
+
+        if maps.get(minrect) == 1:
+            overlap += 1
+        else:
+            maps[minrect] = 1
+
+    print('True Number: {}'.format(truetrues))
+    cv.imshow('image', img2)
+    cv.waitKey(0)
+
+def custom_luminance_correction(im):
     
-    temp = cv.cvtColor(img, cv.COLOR_BGR2HSV)
+    imgr = cv.cvtColor(im, cv.COLOR_BGR2GRAY)
+    maxi = 0
+    # cv.imshow('before', im)
+    for i in range(imgr.shape[0]):
+        for j in range(imgr.shape[1]):
+            if maxi < imgr[i,j]:
+                maxi = imgr[i,j]
+    for i in range(im.shape[0]):
+        for j in range(im.shape[1]):
+            diff = maxi - imgr[i,j]
+            im[i,j][0] = diff * 0.114 + im[i,j][0]
+            im[i,j][1] = diff * 0.587 + im[i,j][1]
+            im[i,j][2] = diff * 0.299 + im[i,j][2]
+    return im
 
-    (h, s, v) = sum_area(coords[0], coords[1], temp,c)
-
-    hs = 4
-    ss = 25
-    vs = 25
-    lb = 0 if h - hs <= 0 else h - hs
-    lg = 0 if s - ss <= 0 else s - ss
-    lr = 0 if v - vs <= 0 else v - vs
-    ub = 180 if h + hs >= 180 else h + hs
-    ug = 255 if s + ss >= 255 else s + ss
-    ur = 255 if v + vs >= 255 else v + vs
-
-    lower = np.array([lb, lg, lr], dtype = "uint8")
-    upper = np.array([ub, ug, ur], dtype = "uint8")
-
-    mask = cv.inRange(tobemasked, lower, upper)
-
-    contours, hierarchy = cv.findContours(mask, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
-
-    istrue = False
-
-    for pic, contour in enumerate(contours):
-        area = cv.contourArea(contour)
-        if area > 300:
-            istrue = True
-            x, y, w, h = cv.boundingRect(contour)
-            if x > 540:
-                imageFrame = cv.rectangle(img, (x, y), (x + w, y + h), (0, 0, 255), 1)
-                cv.putText(img, str(c), (x, y), cv.FONT_HERSHEY_SIMPLEX, 1, (0,0,255))
-            break
-
-    cv.imshow('image', img)
-
-def click_event(event, x, y, flags, params):
-
-    # im = cv.GaussianBlur(img,(3,3),0)
-    im = img
-
-    if event == cv.EVENT_LBUTTONDOWN:
-        tobemasked = cv.cvtColor(im, cv.COLOR_BGR2HSV)
-
-        temp = cv.cvtColor(im, cv.COLOR_BGR2HSV)
-
-        # (h, s, v) = sum_area_for_click_color_matching(x, y, temp)
-        get_area(x, y, im)
-        # print("{}--{}".format(x,y))
-        # hs = 5
-        # ss = 33
-        # vs = 33
-        # lb = 0 if h - hs <= 0 else h - hs
-        # lg = 0 if s - ss <= 0 else s - ss
-        # lr = 0 if v - vs <= 0 else v - vs
-        # ub = 180 if h + hs >= 180 else h + hs
-        # ug = 255 if s + ss >= 255 else s + ss
-        # ur = 255 if v + vs >= 255 else v + vs
-
-        # lower = np.array([lb, lg, lr], dtype = "uint8")
-
-        # upper = np.array([ub, ug, ur], dtype = "uint8")
-
-        # mask = cv.inRange(tobemasked, lower, upper)
-
-        # contours, hierarchy = cv.findContours(mask, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
-
-        # for pic, contour in enumerate(contours):
-        #     area = cv.contourArea(contour)
-        #     if area > 300:
-        #         x, y, w, h = cv.boundingRect(contour)
-        #         if(x > 580):
-        #             imageFrame = cv.rectangle(img, (x, y), (x + w, y + h), (0, 0, 255), 2)
-
-        #             # cv.putText(img, str(params[0]), (x, y), cv.FONT_HERSHEY_SIMPLEX, 1.0, (0,0,255))
-        #             break
-
-        cv.imshow('image', img)
-
-img = cv.imread(image_path)
-
-img = cv.resize(img, (1000,750))
-
-# for i in range(len(arr1)):
-#     x = arr1[i][0]
-#     y = arr1[i][1]
-#     w = 40
-#     h = 25
-#     cv.rectangle(img, (x, y), (x + w, y + h), (0, 0, 255), 2)
-
-for i in range(len(arr)):
-    get_area(arr[i][0], arr[i][1], img, i + 1)
-
-cv.imshow('image', img)
-
-# cv.setMouseCallback('image', click_event)
-
-cv.waitKey(0)
+if __name__ == '__main__':
+    # test_range()
+    singular_test(40, 0, 0.1)
+    # custom_luminance_correction()
