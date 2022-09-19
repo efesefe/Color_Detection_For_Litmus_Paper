@@ -88,7 +88,7 @@ def gamma_correction(im, gamma=0.47):
 
     return cv.LUT(im, lookUpTable)
 
-def resize_smaller(im, width = 1000, height =):
+def resize_smaller(im, width = 1000, height = 750):
     im = cv.resize(im, (width,height),interpolation = cv.INTER_AREA)
     return im
 

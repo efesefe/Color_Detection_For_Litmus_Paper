@@ -206,8 +206,9 @@ def singular_test(v, blur, gamma):
     img = img2 = resize_smaller(img)
 
     # im_b = resize_smaller(im_b)
-
-    img = custom_luminance_correction(img)
+    cv.imshow('prev', img)
+    img = custom_luminance_correction(v)
+    cv.imshow('after', img)
     img = cv.cvtColor(img, cv.COLOR_BGR2HSV)
 
     img = apply_gamma_blur(img, gamma, blur)
@@ -235,24 +236,29 @@ def singular_test(v, blur, gamma):
     cv.imshow('image', img2)
     cv.waitKey(0)
 
-def custom_luminance_correction(im):
+def custom_luminance_correction(n):
     
-    imgr = cv.cvtColor(im, cv.COLOR_BGR2GRAY)
+    im, imgr = original_bright_images(n)
+    im = resize_smaller(im)
+    imgr = resize_smaller(imgr)
+    imgr = cv.cvtColor(imgr, cv.COLOR_BGR2GRAY)
     maxi = 0
     # cv.imshow('before', im)
     for i in range(imgr.shape[0]):
         for j in range(imgr.shape[1]):
-            if maxi < imgr[i,j]:
-                maxi = imgr[i,j]
+            maxi = max(maxi, imgr[i,j])
+    im = cv.cvtColor(im, cv.COLOR_BGR2HSV)
     for i in range(im.shape[0]):
         for j in range(im.shape[1]):
             diff = maxi - imgr[i,j]
-            im[i,j][0] = diff * 0.114 + im[i,j][0]
-            im[i,j][1] = diff * 0.587 + im[i,j][1]
-            im[i,j][2] = diff * 0.299 + im[i,j][2]
+            # im[i,j][0] = diff * 0.114 + im[i,j][0]
+            # im[i,j][1] = diff * 0.587 + im[i,j][1]
+            # im[i,j][2] = diff * 0.299 + im[i,j][2]
+            im[i,j][2] = np.add(im[i,j][2],diff)
+    im = cv.cvtColor(im, cv.COLOR_HSV2BGR)
     return im
 
 if __name__ == '__main__':
     # test_range()
-    singular_test(40, 0, 0.1)
+    singular_test(45, 0, 0)
     # custom_luminance_correction()
