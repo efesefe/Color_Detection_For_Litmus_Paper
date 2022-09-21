@@ -4,7 +4,7 @@ from numpy.ma import divide, mean
 from matplotlib import pyplot as plt
 import math
 from os.path import exists
-import xlsxwriter
+
 from multiprocessing import Process
 from generic_operations import *
 
@@ -43,7 +43,7 @@ def general_get_area(im, n, left, right, w, h, impaint):
 
 def test_range():
     procs = []
-    for v in range(49, 40, -1):
+    for v in range(42, 41, -1):
         p = Process(target=f, args=(v,))
         procs.append(p)
         p.start()
@@ -61,161 +61,127 @@ def f(v):
     w = 25
     h = 15
     
-    workbook = xlsxwriter.Workbook('values/' + image_name + '_values.xlsx')
-    worksheet = workbook.add_worksheet()
-
-    worksheet.write('A1', 'Blur')
-    worksheet.write('B1', 'Gamma')
-    worksheet.write('C1', 'Luminance Correction')
-    worksheet.write('D1', 'True Number (BGR)')
-
-    worksheet.write('F1', 'Blur')
-    worksheet.write('G1', 'Gamma')
-    worksheet.write('H1', 'Luminance Correction')
-    worksheet.write('I1', 'True Number (HSV)')
-
-    worksheet.write('K1', 'Blur')
-    worksheet.write('L1', 'Gamma')
-    worksheet.write('M1', 'Luminance Correction')
-    worksheet.write('N1', 'True Number (LAB)')
-
-    worksheet.write('P1', 'Blur')
-    worksheet.write('R1', 'Gamma')
-    worksheet.write('S1', 'Luminance Correction')
-    worksheet.write('T1', 'True Number (LUV)')
+    path = 'values/' + image_name + '_values.xlsx'
+    cols = []
+    datas = []
+    color_spaces = ['HSV', 'LAB', 'LUV', 'BGR']
+    col_char = 'A'
+    for i in range(len(color_spaces)):
+        cols.append(col_char + '1')
+        col_char = next_char_for_excell(col_char)
+        cols.append(col_char  + '1')
+        col_char = next_char_for_excell(col_char)
+        cols.append(col_char  + '1')
+        col_char = next_char_for_excell(col_char)
+        cols.append(col_char  + '1')
+        col_char = next_char_for_excell(col_char)
+        datas.append('Blur')
+        datas.append('Gamma')
+        datas.append('Custom Luminance Correction')
+        datas.append('True Number ({})'.format(color_spaces[i]))
+        col_char = next_char_for_excell(col_char)
 
     t = 2
-    blu = 0
+    
+    gammas = [0] * len(color_spaces)
+    blurs = [0] * len(color_spaces)
+    lums = [0] * len(color_spaces)
+    besttrues = [0] * len(color_spaces)
+    truetrues = [0] * len(color_spaces)
 
-    gammabgr = gammahsv = gammalab = gammaluv = 0
-    blurbgr = blurhsv = blurlab = blurluv = 0
-    besttruebgr = besttruehsv = besttruelab = besttrueluv = 0
-    truetruesbgr = truetrueshsv = truetrueslab = truetruesluv = 0
-    lumbgr = lumhsv = lumlab = lumluv = 0
+    imgs = []
 
-    while blu <= 10:
-        for gam in np.linspace(1.0,0.0,num=41):
+    blu = 9
+    while blu <= 11:
+        for gam in np.linspace(2.0, 0.0, num=6):
             for tog in [0,1]:
-                truetruesbgr = truetrueslab = truetrueshsv = truetruesluv = 0
+                truetrues = [0] * len(color_spaces)
                 tm2 = tog % 2 == 0
+                temp_img = get_original_image(v)
+                temp_img = resize_smaller(temp_img)
                 if tm2:
-                    imglab = imghsv = imgbgr = imgluv = luminance_correction_with_bright_image(img, b_img)
+                    temp_img = custom_luminance_correction(v)
+                imgs = [temp_img] * len(color_spaces)
 
-                imglab = cv.cvtColor(imglab, cv.COLOR_BGR2LAB)
-                imglab = apply_gamma_blur(imglab, gam, blu)
-                
-                imghsv = cv.cvtColor(imghsv, cv.COLOR_BGR2HSV)
-                imghsv = apply_gamma_blur(imghsv, gam, blu)
+                cvt_imgs = []
+                for i in range(len(color_spaces)):
+                    tmp = color_converter(imgs[i], color_spaces[i])
+                    ttt = apply_gamma_blur(tmp, gam, blu)
+                    cvt_imgs.append(ttt)
 
-                imgluv = cv.cvtColor(imgluv, cv.COLOR_BGR2LUV)
-                imgluv = apply_gamma_blur(imgluv, gam, blu)
+                for k in range(len(color_spaces)):
+                    for i in range(len(l)):
+                        temp, _, _ = general_get_area(cvt_imgs[k], i + 1, l, r, w,h, img2)
+                        if temp:
+                            truetrues[k] = truetrues[k] + 1
 
-                imgbgr = apply_gamma_blur(imgbgr, gam, blu)
+                    if truetrues[k] > besttrues[k]:
+                        besttrues[k] = truetrues[k]
+                        gammas[k] = gam
+                        blurs[k] = blu
+                        lums[k] = 1 if tm2 else 0
 
-                for i in range(len(l)):
-                    tempbgr, minrect, _ = general_get_area(imgbgr, i + 1, l, r, w,h, img2)
-                    if tempbgr:
-                        truetruesbgr += 1
-
-                    temphsv, minrect, _ = general_get_area(imghsv, i + 1, l, r, w,h, img2)
-                    if temphsv:
-                        truetrueshsv += 1
-
-                    templab, minrect, _ = general_get_area(imglab, i + 1, l, r, w,h, img2)
-                    if templab:
-                        truetrueslab += 1
-
-                    templuv, minrect, _ = general_get_area(imgluv, i + 1, l, r, w,h, img2)
-                    if templuv:
-                        truetruesluv += 1
-
-                if truetruesbgr > besttruebgr:
-                    besttruebgr = truetruesbgr
-                    gammabgr = gam
-                    blurbgr = blu
-                    lumbgr = 1 if tm2 else 0
-
-                if truetrueshsv > besttruehsv:
-                    besttruehsv = truetrueshsv
-                    gammahsv = gam
-                    blurhsv = blu
-                    lumhsv = 1 if tm2 else 0
-
-                if truetrueslab > besttruelab:
-                    besttruelab = truetrueslab
-                    gammalab = gam
-                    blurlab = blu
-                    lumlab = 1 if tm2 else 0
-
-                if truetruesluv > besttrueluv:
-                    besttrueluv = truetruesluv
-                    gammaluv = gam
-                    blurluv = blu
-                    lumluv = 1 if tm2 else 0
-
-                worksheet.write(('A' + str(t)), blu)
-                worksheet.write(('B' + str(t)), gam)
-                worksheet.write(('C' + str(t)), '+' if tm2 else '-')
-                worksheet.write(('D' + str(t)), truetruesbgr)
-
-                worksheet.write(('F' + str(t)), blu)
-                worksheet.write(('G' + str(t)), gam)
-                worksheet.write(('H' + str(t)), '+' if tm2 else '-')
-                worksheet.write(('I' + str(t)), truetrueshsv)
-
-                worksheet.write(('K' + str(t)), blu)
-                worksheet.write(('L' + str(t)), gam)
-                worksheet.write(('M' + str(t)), '+' if tm2 else '-')
-                worksheet.write(('N' + str(t)), truetrueslab)
-
-                worksheet.write(('P' + str(t)), blu)
-                worksheet.write(('R' + str(t)), gam)
-                worksheet.write(('S' + str(t)), '+' if tm2 else '-')
-                worksheet.write(('T' + str(t)), truetruesluv)
+                col_char = 'A'
+                for i in range(len(color_spaces)):
+                    cols.append(col_char + str(t))
+                    col_char = next_char_for_excell(col_char)
+                    cols.append(col_char  + str(t))
+                    col_char = next_char_for_excell(col_char)
+                    cols.append(col_char  + str(t))
+                    col_char = next_char_for_excell(col_char)
+                    cols.append(col_char  + str(t))
+                    col_char = next_char_for_excell(col_char)
+                    datas.append(str(blu))
+                    datas.append(str(gam))
+                    datas.append('+' if tm2 else '-')
+                    datas.append(truetrues[i])
+                    col_char = next_char_for_excell(col_char)
 
                 t += 1
 
         if blu == 0: blu += 1
         blu += 2
-    workbook.close()
+
     print("-------originalv{}---------".format(v))
-    print("best true for bgr: {}".format(besttruebgr))
-    print("gamma for bgr: {}".format(gammabgr))
-    print("blur for bgr: {}".format(blurbgr))
-    print("luminance correction: {}".format(lumbgr))
-    print("---------------------------")
-    print("best true for hsv: {}".format(besttruehsv))
-    print("gamma for hsv: {}".format(gammahsv))
-    print("blur for hsv: {}".format(blurhsv))
-    print("luminance correction: {}".format(lumhsv))
-    print("---------------------------")
-    print("best true for lab: {}".format(besttruelab))
-    print("gamma for lab: {}".format(gammalab))
-    print("blur for lab: {}".format(blurlab))
-    print("luminance correction: {}".format(lumlab))
-    print("---------------------------")
-    print("best true for luv: {}".format(besttrueluv))
-    print("gamma for luv: {}".format(gammaluv))
-    print("blur for luv: {}".format(blurluv))
-    print("luminance correction: {}".format(lumluv))
-    print("---------------------------")
+    for i in range(len(color_spaces)):
+        print(color_spaces[i] + ':')
+        print("best true: {}".format(besttrues[i]))
+        print("gamma: {}".format(gammas[i]))
+        print("blur: {}".format(blurs[i]))
+        print("luminance correction: {}".format(lums[i]))
+        print("---------------------------")
 
-def singular_test(v, blur, gamma):
-    img, im_b = original_bright_images(v)
+    write_to_excell_file(cols, datas, path)
 
-    img = img2 = resize_smaller(img)
+def custom_test(v):
+    width = 20
+    height = 10
+    impath = 'images/referencev3.jpg'
+    coordpath = 'referencev3'
+    im = get_image_custom(impath)
+    img2 = get_image_custom(impath)
+    l = get_left_right_coords_custom(impath, coordpath)
+    test_coords(l, width, height, img2)
+    cv.imshow('image', img2)
+    cv.waitKey(0)
 
-    # im_b = resize_smaller(im_b)
-    cv.imshow('prev', img)
-    img = custom_luminance_correction(v)
-    cv.imshow('after', img)
-    img = cv.cvtColor(img, cv.COLOR_BGR2HSV)
+def singular_test(v, blur, gamma, lum):
+    # img, im_b = original_bright_images(v)
+    img = get_original_image(v)
+    img2 = get_original_image(v)
+    img = resize_smaller(img)
+    # img2 = resize_smaller(img)
+
+    if lum:
+        img = custom_luminance_correction(v)
+
+    img = color_converter(img, 'HSV')
 
     img = apply_gamma_blur(img, gamma, blur)
     l, r = left_right_coordinates(v)
 
-    width = 25
-    height = 15
+    width = 20
+    height = 10
     truetrues = overlap = 0
     maps = {}
     # test_coords(r, width, height, img2)
@@ -224,41 +190,50 @@ def singular_test(v, blur, gamma):
         temp, minrect, img2 = general_get_area(img, i + 1, l, r, width,height, img2)
         if temp:
             truetrues += 1
-        else:
-            print('{} -> {}'.format(i + 1, minrect + 1))
+        # else:
+        #     print('{} -> {}'.format(i + 1, minrect + 1))
 
         if maps.get(minrect) == 1:
             overlap += 1
         else:
             maps[minrect] = 1
-
-    print('True Number: {}'.format(truetrues))
-    cv.imshow('image', img2)
-    cv.waitKey(0)
+    if lum:
+        print('True Number (custom): {}'.format(truetrues))
+    else:
+        print('True Number: {}'.format(truetrues))
+    # cv.imshow('image', img2)
+    # cv.waitKey(0)
 
 def custom_luminance_correction(n):
     
     im, imgr = original_bright_images(n)
     im = resize_smaller(im)
     imgr = resize_smaller(imgr)
-    imgr = cv.cvtColor(imgr, cv.COLOR_BGR2GRAY)
+    imgr = cv.cvtColor(imgr, cv.COLOR_BGR2HSV)
+    # imgr = apply_blur(51, imgr)
     maxi = 0
     # cv.imshow('before', im)
+    x = 0
     for i in range(imgr.shape[0]):
         for j in range(imgr.shape[1]):
-            maxi = max(maxi, imgr[i,j])
+            maxi += imgr[i,j][2]
+            x += 1
+    maxi /= x
     im = cv.cvtColor(im, cv.COLOR_BGR2HSV)
     for i in range(im.shape[0]):
         for j in range(im.shape[1]):
-            diff = maxi - imgr[i,j]
-            # im[i,j][0] = diff * 0.114 + im[i,j][0]
-            # im[i,j][1] = diff * 0.587 + im[i,j][1]
-            # im[i,j][2] = diff * 0.299 + im[i,j][2]
+            diff = maxi - imgr[i,j][2]
             im[i,j][2] = np.add(im[i,j][2],diff)
     im = cv.cvtColor(im, cv.COLOR_HSV2BGR)
     return im
 
 if __name__ == '__main__':
     # test_range()
-    singular_test(45, 0, 0)
+    # singular_test(42, 9, 2.0, False)
+    custom_test(3)
+    # singular_test(41, 5, 1.9, False)
+    # for i in range(4, 50):
+    #     print("-----{}-----".format(i))
+    #     singular_test(i, 0, 0, False)
+    #     singular_test(i, 0, 0, True)
     # custom_luminance_correction()

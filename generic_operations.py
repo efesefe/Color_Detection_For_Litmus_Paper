@@ -2,6 +2,7 @@ import cv2 as cv
 import numpy as np
 from numpy.ma import divide, mean
 from os.path import exists
+import xlsxwriter
 
 def test_coords(arr,w,h,img):
     for i in range(len(arr)):
@@ -63,14 +64,14 @@ def calculate_C(f, b):
 
 def get_coords(event, x, y, flags, params):
     if event == cv.EVENT_LBUTTONDOWN and params[1] < 110:
-        left_or_right(params[0], params[1])
+        left_or_right(params[0], params[1],x,y)
         params[1] = params[1] + 1
 
-def left_or_right(file_to_read_from, count):
+def left_or_right(file_to_read_from, count,x,y):
     if count < 55:
         open_file_then_write((file_to_read_from + "left"), x, y, count)
 
-    elif count >= 55 and params[1] < 110:
+    elif count >= 55 and count < 110:
         open_file_then_write((file_to_read_from + "right"), x, y, count)
 
 def get_average_color_of_area(im,x, y, w, h):
@@ -93,12 +94,16 @@ def resize_smaller(im, width = 1000, height = 750):
     return im
 
 def original_bright_images(version, extension = 'jpg'):
-    original_image = cv.imread('images/originalv' + str(version) + '.' + extension)
+    original_image = get_original_image(version)
     bright_image = cv.imread('images/brightv' + str(version) + '.' + extension)
     return original_image, bright_image
 
+def get_original_image(version, extension = 'jpg'):
+    original_image = cv.imread('images/originalv' + str(version) + '.' + extension)
+    return original_image
+
 def left_right_coordinates(version, extension = 'jpg'):
-    img, _ = original_bright_images(version, extension)
+    img = get_original_image(version, extension)
     read_coords_file = 'originalv' + str(version) + '_coords'
     c1, c2 = coord_read_operations(read_coords_file, img)
     return c1, c2
@@ -117,3 +122,71 @@ def apply_blur(blur, img):
     if blur != 0:
         img = cv.GaussianBlur(img,(blur,blur),0)
     return img
+
+def write_to_excell_file(cols, datas, path):
+    workbook = xlsxwriter.Workbook(path)
+    worksheet = workbook.add_worksheet()
+    for col, data in zip(cols, datas):
+        worksheet.write(col, data)
+    workbook.close()
+
+def color_converter(img, space):
+    if space == 'HSV':
+        img = cv.cvtColor(img, cv.COLOR_BGR2HSV)
+    elif space == 'LUV':
+        img = cv.cvtColor(img, cv.COLOR_BGR2LUV)
+    elif space == 'LAB':
+        img = cv.cvtColor(img, cv.COLOR_BGR2LAB)
+    return img
+
+def clahe_applier(img):
+    img = cv.cvtColor(img, cv.COLOR_BGR2HSV)
+    (H,S,V) = cv.split(img)
+
+    clahe = cv.createCLAHE(clipLimit=2, tileGridSize=(8,8))
+    final_img = clahe.apply(V) + 30
+    final_img = cv.merge([H,S,V])
+    final_img = cv.cvtColor(final_img, cv.COLOR_HSV2BGR)
+    return final_img
+
+def next_char_for_excell(char):
+    if char[-1] == 'Z':
+        for i in range(len(char) - 1, -1, -1,):
+            if char[i] != 'Z':
+                num = ord(char[i])
+                num += 1
+                char = char[:i] + chr(num) + char[i+1:]
+                return char
+            else:
+                char = char[:i] + 'A' + char[i+1:]
+        char += 'A'
+        return char
+
+    numeric = ord(char[-1])
+    numeric += 1
+    char = char[:len(char)-1] + chr(numeric)
+    return char
+
+def get_image_custom(path):
+    reference_image = cv.imread(path)
+    return reference_image
+
+def get_left_right_coords_custom(impath, coordpath):
+    img = get_image_custom(impath)
+    read_coords_file = coordpath
+    c1 = coord_read_operations_single(read_coords_file, img)
+    return c1
+
+def coord_read_operations_single(read_coords_file, img):
+    if exists("coords/" + read_coords_file + ".txt"):
+        a = open_file_then_read(read_coords_file)
+        return a
+
+    cv.imshow('image', img)
+    cv.setMouseCallback('image', get_coords_single, [read_coords_file, 0])
+    return [], []
+
+def get_coords_single(event, x, y, flags, params):
+    if event == cv.EVENT_LBUTTONDOWN and params[1] < 55:
+        open_file_then_write((params[0]), x, y, params[1])
+        params[1] = params[1] + 1
