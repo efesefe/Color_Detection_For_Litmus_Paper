@@ -3,6 +3,7 @@ import numpy as np
 from numpy.ma import divide, mean
 from os.path import exists
 import xlsxwriter
+import glob
 
 def test_coords(arr,w,h,img):
     for i in range(len(arr)):
@@ -74,12 +75,12 @@ def left_or_right(file_to_read_from, count,x,y):
     elif count >= 55 and count < 110:
         open_file_then_write((file_to_read_from + "right"), x, y, count)
 
-def get_average_color_of_area(im,x, y, w, h):
+def get_average_color_of_area(im, x, y, w, h):
     c = w * h
     t = im[y : y + h, x: x + w]
-    b = np.sum(t[:,:,0])/ c
-    g = np.sum(t[:,:,1])/ c
-    r = np.sum(t[:,:,2])/ c
+    b = np.sum(t[:,:,0]) / c
+    g = np.sum(t[:,:,1]) / c
+    r = np.sum(t[:,:,2]) / c
     return (b, g, r)
 
 def gamma_correction(im, gamma=0.47):
@@ -190,3 +191,62 @@ def get_coords_single(event, x, y, flags, params):
     if event == cv.EVENT_LBUTTONDOWN and params[1] < 55:
         open_file_then_write((params[0]), x, y, params[1])
         params[1] = params[1] + 1
+
+def coord_set_operations(v, number_of_strips, number_of_rectangles):
+    name = 'originalv' + str(v)
+    img = get_image_custom('images/' + name + '.jpg')
+    img = resize_smaller(img)
+    for i in range(0, number_of_strips):
+        if not exists('coords/' + name + '_' + str(i + 1) +'.txt'):
+            cv.imshow('image1', img)
+            
+            cv.setMouseCallback('image1', set_coords, [name, number_of_strips, number_of_rectangles,i])
+            cv.waitKey(0)
+            break
+    return get_coords(v)
+
+def set_coords(event, x, y, flags, params):
+    if event == cv.EVENT_LBUTTONDOWN:
+        name = params[0]
+        number_strips = params[1]
+        number_rectangle = params[2]
+        strip_number = number_strips - 1
+        current_strip = params[3]
+        if current_strip == number_strips:
+            return
+        elif number_rectangle[current_strip] > 0:
+            f = open("coords/" + name + '_' + str(current_strip+1) + ".txt","a")
+            f.write("({},{})-\n".format(x,y))
+            print('{} -> ({},{})'.format(number_rectangle[current_strip], x, y))
+            f.close()
+            params[2][current_strip] = params[2][current_strip] - 1
+        if number_rectangle[current_strip] <= 0:
+            params[3] += 1
+            
+def read_return_coords(path):
+    f = open(path, "r")
+    strf = f.read()
+    splt = strf.split('-')
+    splt = splt[:-1]
+    arr = []
+
+    for i in range(len(splt)):
+        splt[i] = splt[i].replace('(', '')
+        splt[i] = splt[i].replace(')', '')
+        temp = splt[i].split(',')
+        t1 = int(temp[0])
+        t2 = int(temp[1])
+        arr.append((t1,t2))
+    f.close()
+
+    return arr
+
+def get_coords(v):
+    paths = glob.glob('coords/originalv' + str(v) + '_[0-9].txt')
+    # print(paths)
+    coords = []
+    for path in paths:
+
+        coords.append(read_return_coords(path))
+
+    return coords
