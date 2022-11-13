@@ -5,6 +5,20 @@ from os.path import exists
 import xlsxwriter
 import glob
 
+def set_new_color_for_area(color, x, y, w, h,img):
+    img[y : y + h , x : x + w] = color
+    return img
+
+def print_scores(version,color_spaces,best_true,gamma,blur,luminance):
+    print("-------originalv{}---------".format(version))
+    for i in range(len(color_spaces)):
+        print(color_spaces[i] + ':')
+        print("best true: {}".format(best_true[i]))
+        print("gamma: {}".format(gamma[i]))
+        print("blur: {}".format(blur[i]))
+        print("luminance correction: {}".format(luminance[i]))
+        print("---------------------------")
+
 def test_coords(arr,w,h,img):
     for i in range(len(arr)):
         x = arr[i][0]
@@ -78,10 +92,10 @@ def left_or_right(file_to_read_from, count,x,y):
 def get_average_color_of_area(im, x, y, w, h):
     c = w * h
     t = im[y : y + h, x: x + w]
-    b = np.sum(t[:,:,0]) / c
-    g = np.sum(t[:,:,1]) / c
-    r = np.sum(t[:,:,2]) / c
-    return (b, g, r)
+    ch_1 = np.sum(t[:,:,0]) / c
+    ch_2 = np.sum(t[:,:,1]) / c
+    ch_3 = np.sum(t[:,:,2]) / c
+    return (ch_1, ch_2, ch_3)
 
 def gamma_correction(im, gamma=0.47):
     lookUpTable = np.empty((1,256), np.uint8)
